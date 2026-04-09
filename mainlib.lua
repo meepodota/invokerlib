@@ -1,10 +1,3 @@
---[[
-    InvokerLib - Premium Roblox UI Library
-    Inspired by gaming overlay interfaces
-    
-    Load via: loadstring(game:HttpGet("YOUR_RAW_URL"))()
-]]
-
 local InvokerLib = {}
 InvokerLib.__index = InvokerLib
 
