@@ -9,4 +9,7 @@ Three changes made:
 
 You can access the wiki for lib right there: https://invokerlib.gitbook.io/invokerlib-docs
 
+You're vibecoding? No problem, from now on, you can use AI Instructions for my library!
+https://github.com/meepodota/invokerlib/blob/main/invokerlib-ai-instructions.txt
+
 ![preview](https://cdn.discordapp.com/attachments/1491036329637580920/1491792154241142917/image.png?ex=69d8fb35&is=69d7a9b5&hm=45e9c496f5aeedcb7b59e0508e374515ebd80793d24a4a255f7c2bf942a6e4b5&)
