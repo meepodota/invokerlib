@@ -5,6 +5,6 @@ Three changes made:
 
 - Direct `Position` set instead of `Tween` in the drag loop — The `Tween` with `0.05s` was adding a tiny animation delay on every mouse move event, making the window feel laggy and jittery. Direct assignment makes it perfectly snappy.
 
-- `RightControl` → `RightShift` — Changed the default toggle keybind as requested. You can still override it per-window with `ToggleKey = Enum.KeyCode.Whatever` in your `CreateWindow` config.
+- `RightControl` → `RightShift` — Changed the default toggle keybind. You can still override it per-window with `ToggleKey = Enum.KeyCode.Whatever` in your `CreateWindow` config.
 
 You can access the wiki for lib right there: https://invokerlib.gitbook.io/invokerlib-docs
