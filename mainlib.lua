@@ -105,7 +105,7 @@ local function MakeDraggable(frame, handle)
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             local delta = input.Position - dragStart
-            Tween(frame, {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}, 0.05)
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
 end
@@ -218,6 +218,7 @@ function InvokerLib:CreateWindow(config)
     local LogoSection = Create("Frame", {
         Name = "LogoSection",
         BackgroundTransparency = 1,
+        Active = true,
         Size = UDim2.new(1, 0, 0, 60),
         Parent = Sidebar
     })
@@ -1306,7 +1307,7 @@ function InvokerLib:CreateWindow(config)
     end
     
     -- Toggle Keybind
-    local toggleKey = config.ToggleKey or Enum.KeyCode.RightControl
+    local toggleKey = config.ToggleKey or Enum.KeyCode.RightShift
     UserInputService.InputBegan:Connect(function(input, processed)
         if not processed and input.KeyCode == toggleKey then
             MainFrame.Visible = not MainFrame.Visible
