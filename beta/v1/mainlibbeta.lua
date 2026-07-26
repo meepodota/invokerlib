@@ -195,7 +195,7 @@ function InvokerLib:CreateWindow(config)
     local MainFrame = Create("Frame", {
         Name = "MainFrame", AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundColor3 = Theme.Background, Position = UDim2.new(0.5, 0, 0.5, 0),
-        Size = windowSize, Parent = ScreenGui
+        Size = windowSize, ClipsDescendants = true, Parent = ScreenGui
     })
     AddCorner(MainFrame, 8)
     AddStroke(MainFrame, Theme.Border, 1)
@@ -363,9 +363,13 @@ function InvokerLib:CreateWindow(config)
     MinButton.MouseButton1Click:Connect(function()
         minimized = not minimized
         if minimized then
+            PlayerSection.Visible = false
             Tween(MainFrame, { Size = UDim2.new(0, 180, 0, 60) }, Ease.Smooth)
         else
             Tween(MainFrame, { Size = windowSize }, Ease.Spring)
+            task.delay(0.15, function()
+                if not minimized then PlayerSection.Visible = true end
+            end)
         end
     end)
 
@@ -432,31 +436,49 @@ function InvokerLib:CreateWindow(config)
         Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8), Parent = TabPage })
 
         local function SelectTab()
-            for _, tab in pairs(Window.Tabs) do
-                tab.Button.BackgroundTransparency = 1
-                Tween(tab.Indicator, { Size = UDim2.new(0, 3, 0, 0) }, Ease.Snap)
-                tab.Label.TextColor3 = Theme.TextDark
-                tab.Icon.TextColor3 = Theme.TextDark
-                if tab.Page.Visible then
-                    Tween(tab.Page, { Position = UDim2.new(0, 20, 0, 0) }, Ease.Snap)
-                    task.delay(0.14, function() tab.Page.Visible = false end)
-                end
-            end
-            TabButton.BackgroundTransparency = 0
-            TabButton.BackgroundColor3 = Theme.AccentSoft
-            Tween(TabIndicator, { Size = UDim2.new(0, 3, 0.65, 0) }, Ease.Elastic)
-            TabLabel.TextColor3 = Theme.Text
-            TabIconLabel.TextColor3 = Theme.AccentGlow
-            TabPage.Visible = true
-            TabPage.Position = UDim2.new(0, -20, 0, 0)
-            Tween(TabPage, { Position = UDim2.new(0, 0, 0, 0) }, Ease.Bounce)
-            Window.CurrentTab = Tab
+            if Window.CurrentTab == Tab then return end
 
-            Tween(Breadcrumb, { TextTransparency = 1 }, Ease.Snap)
-            task.delay(0.1, function()
-                Breadcrumb.Text = string.format('<font color="rgb(139,92,246)">%s</font> / Main Settings', tabName)
-                Tween(Breadcrumb, { TextTransparency = 0 }, Ease.Smooth)
-            end)
+            local function ShowNew()
+                for _, tab in pairs(Window.Tabs) do
+                    tab.Button.BackgroundTransparency = 1
+                    Tween(tab.Indicator, { Size = UDim2.new(0, 3, 0, 0) }, Ease.Snap)
+                    tab.Label.TextColor3 = Theme.TextDark
+                    tab.Icon.TextColor3 = Theme.TextDark
+                    tab.Page.Visible = false
+                end
+                TabButton.BackgroundTransparency = 0
+                TabButton.BackgroundColor3 = Theme.AccentSoft
+                Tween(TabIndicator, { Size = UDim2.new(0, 3, 0.65, 0) }, Ease.Elastic)
+                TabLabel.TextColor3 = Theme.Text
+                TabIconLabel.TextColor3 = Theme.AccentGlow
+                TabPage.Visible = true
+                TabPage.Position = UDim2.new(0, -20, 0, 0)
+                Tween(TabPage, { Position = UDim2.new(0, 0, 0, 0) }, Ease.Bounce)
+                Window.CurrentTab = Tab
+
+                Tween(Breadcrumb, { TextTransparency = 1 }, Ease.Snap)
+                task.delay(0.1, function()
+                    Breadcrumb.Text = string.format('<font color="rgb(139,92,246)">%s</font> / Main Settings', tabName)
+                    Tween(Breadcrumb, { TextTransparency = 0 }, Ease.Smooth)
+                end)
+            end
+
+            local previous = Window.CurrentTab
+            if previous and previous.Page and previous.Page.Visible then
+                local fade = Create("Frame", {
+                    Name = "TabFade", BackgroundColor3 = Theme.Background,
+                    BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0),
+                    ZIndex = 50, Parent = previous.Page
+                })
+                local ft = Tween(fade, { BackgroundTransparency = 0 }, Ease.Smooth)
+                ft.Completed:Connect(function()
+                    if previous.Page then previous.Page.Visible = false end
+                    fade:Destroy()
+                    ShowNew()
+                end)
+            else
+                ShowNew()
+            end
         end
 
         TabButton.MouseButton1Click:Connect(SelectTab)
@@ -802,8 +824,7 @@ function InvokerLib:CreateWindow(config)
                     local OptionButton = Create("TextButton", {
                         Name = option, BackgroundColor3 = Theme.Background,
                         Size = UDim2.new(1, 0, 0, 28), Font = Enum.Font.Gotham,
-                        Text = multiSelect and ("  " .. option) or option,
-                        TextColor3 = Theme.Text, TextSize = 11,
+                        Text = "", TextColor3 = Theme.Text, TextSize = 11,
                         TextXAlignment = Enum.TextXAlignment.Left, Parent = OptionsScroll
                     })
                     AddCorner(OptionButton, 4)
@@ -811,11 +832,20 @@ function InvokerLib:CreateWindow(config)
                     local checkBox = nil
                     if multiSelect then
                         checkBox = Create("Frame", {
-                            BackgroundColor3 = Theme.Border, Position = UDim2.new(0, 6, 0.5, 0),
+                            BackgroundColor3 = Theme.Border, Position = UDim2.new(0, 8, 0.5, 0),
                             AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(0, 12, 0, 12), Parent = OptionButton
                         })
                         AddCorner(checkBox, 3)
                     end
+
+                    Create("TextLabel", {
+                        BackgroundTransparency = 1,
+                        Position = UDim2.new(0, multiSelect and 26 or 10, 0, 0),
+                        Size = UDim2.new(1, multiSelect and -30 or -14, 1, 0),
+                        Font = Enum.Font.Gotham, Text = option, TextColor3 = Theme.Text,
+                        TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left,
+                        TextTruncate = Enum.TextTruncate.AtEnd, Parent = OptionButton
+                    })
 
                     OptionButton.MouseEnter:Connect(function()
                         Tween(OptionButton, { BackgroundColor3 = Theme.AccentSoft }, Ease.Snap)
@@ -1053,21 +1083,21 @@ function InvokerLib:CreateWindow(config)
 
                 local PickerFrame = Create("Frame", {
                     Name = pickerName, BackgroundColor3 = Theme.ElementHover,
-                    Size = UDim2.new(1, 0, 0, 90), Parent = SectionContent
+                    Size = UDim2.new(1, 0, 0, 100), Parent = SectionContent
                 })
                 AddCorner(PickerFrame, 6)
                 AddElementStroke(PickerFrame)
 
                 Create("TextLabel", {
-                    BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 4),
+                    BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 6),
                     Size = UDim2.new(0.6, 0, 0, 18), Font = Enum.Font.Gotham,
                     Text = pickerName, TextColor3 = Theme.Text, TextSize = 12,
                     TextXAlignment = Enum.TextXAlignment.Left, Parent = PickerFrame
                 })
 
                 local Preview = Create("Frame", {
-                    BackgroundColor3 = default, Position = UDim2.new(1, -40, 0, 6),
-                    Size = UDim2.new(0, 30, 0, 30), Parent = PickerFrame
+                    BackgroundColor3 = default, Position = UDim2.new(1, -40, 0, 5),
+                    Size = UDim2.new(0, 30, 0, 28), Parent = PickerFrame
                 })
                 AddCorner(Preview, 6)
                 AddStroke(Preview, Theme.Border, 1)
@@ -1075,9 +1105,10 @@ function InvokerLib:CreateWindow(config)
                 local channels = { "R", "G", "B" }
                 local values = { default.R * 255, default.G * 255, default.B * 255 }
                 local fills = {}
+                local valLabels = {}
 
                 for i, ch in ipairs(channels) do
-                    local yOff = 24 + (i - 1) * 22
+                    local yOff = 38 + (i - 1) * 20
                     Create("TextLabel", {
                         BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, yOff),
                         Size = UDim2.new(0, 14, 0, 16), Font = Enum.Font.GothamBold,
@@ -1100,6 +1131,7 @@ function InvokerLib:CreateWindow(config)
                         Text = tostring(math.floor(values[i])), TextColor3 = Theme.Text,
                         TextSize = 10, TextXAlignment = Enum.TextXAlignment.Right, Parent = PickerFrame
                     })
+                    valLabels[i] = valLabel
 
                     local dragging = false
                     bar.InputBegan:Connect(function(input)
@@ -1128,6 +1160,7 @@ function InvokerLib:CreateWindow(config)
                     values = { color.R * 255, color.G * 255, color.B * 255 }
                     for i = 1, 3 do
                         Tween(fills[i], { Size = UDim2.new(values[i] / 255, 0, 1, 0) }, Ease.Smooth)
+                        valLabels[i].Text = tostring(math.floor(values[i]))
                     end
                     ColorPicker.Value = color
                     Preview.BackgroundColor3 = color
