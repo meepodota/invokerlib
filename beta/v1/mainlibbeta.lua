@@ -6,7 +6,7 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
-local Player: Player = Players.LocalPlayer
+local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 
 local Theme = {
@@ -37,9 +37,9 @@ local Ease = {
     Shrink  = TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
 }
 
-local _ThemeRefs: { {Instance, string, string} } = {}
+local _ThemeRefs = {}
 
-local function Create(instanceType: string, properties: {[string]: any}): Instance
+local function Create(instanceType, properties)
     local instance = Instance.new(instanceType)
     for prop, value in pairs(properties) do
         if prop ~= "Parent" then
@@ -52,21 +52,21 @@ local function Create(instanceType: string, properties: {[string]: any}): Instan
     return instance
 end
 
-local function Tween(obj: Instance, props: {[string]: any}, tweenInfo: TweenInfo?): Tween
+local function Tween(obj, props, tweenInfo)
     local t = TweenService:Create(obj, tweenInfo or Ease.Smooth, props)
     t:Play()
     return t
 end
 
-local function AddCorner(parent: Instance, radius: number?): UICorner
+local function AddCorner(parent, radius)
     return Create("UICorner", { CornerRadius = UDim.new(0, radius or 6), Parent = parent })
 end
 
-local function AddStroke(parent: Instance, color: Color3?, thickness: number?): UIStroke
+local function AddStroke(parent, color, thickness)
     return Create("UIStroke", { Color = color or Theme.Border, Thickness = thickness or 1, Parent = parent })
 end
 
-local function AddPadding(parent: Instance, padding: number): UIPadding
+local function AddPadding(parent, padding)
     return Create("UIPadding", {
         PaddingTop = UDim.new(0, padding), PaddingBottom = UDim.new(0, padding),
         PaddingLeft = UDim.new(0, padding), PaddingRight = UDim.new(0, padding),
@@ -74,11 +74,11 @@ local function AddPadding(parent: Instance, padding: number): UIPadding
     })
 end
 
-local function TrackTheme(instance: Instance, property: string, themeKey: string)
+local function TrackTheme(instance, property, themeKey)
     table.insert(_ThemeRefs, { instance, property, themeKey })
 end
 
-local function MakeDraggable(frame: Frame, handle: Frame?)
+local function MakeDraggable(frame, handle)
     local dragging, dragInput, dragStart, startPos
     handle = handle or frame
     handle.InputBegan:Connect(function(input)
@@ -104,7 +104,7 @@ local function MakeDraggable(frame: Frame, handle: Frame?)
     end)
 end
 
-local function CreateRipple(parent: Frame)
+local function CreateRipple(parent)
     parent.ClipsDescendants = true
     parent.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -124,9 +124,9 @@ local function CreateRipple(parent: Frame)
     end)
 end
 
-local TooltipGui: ScreenGui? = nil
-local TooltipFrame: Frame? = nil
-local TooltipLabel: TextLabel? = nil
+local TooltipGui = nil
+local TooltipFrame = nil
+local TooltipLabel = nil
 
 local function InitTooltip()
     if TooltipGui then return end
@@ -145,7 +145,7 @@ local function InitTooltip()
     })
 end
 
-local function ShowTooltip(text: string)
+local function ShowTooltip(text)
     InitTooltip()
     TooltipLabel.Text = text
     TooltipFrame.Visible = true
@@ -156,13 +156,13 @@ local function HideTooltip()
     if TooltipFrame then TooltipFrame.Visible = false end
 end
 
-local function BindTooltip(element: Instance, description: string?)
+local function BindTooltip(element, description)
     if not description then return end
     element.MouseEnter:Connect(function() ShowTooltip(description) end)
     element.MouseLeave:Connect(function() HideTooltip() end)
 end
 
-local function AddElementStroke(elementFrame: Frame)
+local function AddElementStroke(elementFrame)
     local stroke = AddStroke(elementFrame, Theme.Border, 1)
     elementFrame.MouseEnter:Connect(function()
         Tween(stroke, { Color = Theme.Accent, Thickness = 1.5 }, Ease.Snap)
@@ -479,7 +479,7 @@ function InvokerLib:CreateWindow(config)
         Tab.Indicator = TabIndicator
         Tab.Page = TabPage
 
-        function Tab:SetBadge(visible: boolean, color: Color3?)
+        function Tab:SetBadge(visible, color)
             Badge.Visible = visible
             if color then Badge.BackgroundColor3 = color end
         end
@@ -487,8 +487,8 @@ function InvokerLib:CreateWindow(config)
         table.insert(Window.Tabs, Tab)
         if #Window.Tabs == 1 then SelectTab() end
 
-        function Tab:CreateSection(name: string)
-            sectionCount += 1
+        function Tab:CreateSection(name)
+            sectionCount = sectionCount + 1
             local localOrder = sectionCount
             local Section = {}
 
@@ -594,7 +594,7 @@ function InvokerLib:CreateWindow(config)
 
                 if default then UpdateToggle() end
 
-                function Toggle:Set(value: boolean)
+                function Toggle:Set(value)
                     Toggle.Value = value
                     UpdateToggle()
                     callback(Toggle.Value)
@@ -729,7 +729,7 @@ function InvokerLib:CreateWindow(config)
                     end
                 end)
 
-                function Slider:Set(value: number)
+                function Slider:Set(value)
                     Slider.Value = math.clamp(value, min, max)
                     local pos = (Slider.Value - min) / (max - min)
                     SliderValue.Text = tostring(Slider.Value) .. suffix
@@ -747,8 +747,8 @@ function InvokerLib:CreateWindow(config)
             function Section:CreateDropdown(config)
                 config = config or {}
                 local dropdownName = config.Name or "Dropdown"
-                local options: {string} = config.Options or { "Option 1", "Option 2", "Option 3" }
-                local multiSelect: boolean = config.MultiSelect or false
+                local options = config.Options or { "Option 1", "Option 2", "Option 3" }
+                local multiSelect = config.MultiSelect or false
                 local default = config.Default or options[1]
                 local callback = config.Callback or function() end
                 local Dropdown = {}
@@ -808,7 +808,7 @@ function InvokerLib:CreateWindow(config)
                     })
                     AddCorner(OptionButton, 4)
 
-                    local checkBox: Frame? = nil
+                    local checkBox = nil
                     if multiSelect then
                         checkBox = Create("Frame", {
                             BackgroundColor3 = Theme.Border, Position = UDim2.new(0, 6, 0.5, 0),
@@ -884,7 +884,7 @@ function InvokerLib:CreateWindow(config)
             function Section:CreateKeybind(config)
                 config = config or {}
                 local keybindName = config.Name or "Keybind"
-                local default: Enum.KeyCode = config.Default or Enum.KeyCode.E
+                local default = config.Default or Enum.KeyCode.E
                 local callback = config.Callback or function() end
                 local Keybind = {}
                 Keybind.Value = default
@@ -914,7 +914,7 @@ function InvokerLib:CreateWindow(config)
                 AddCorner(KeybindButton, 4)
                 local kbStroke = AddStroke(KeybindButton, Theme.Border, 1)
 
-                local pulseConn: RBXScriptConnection? = nil
+                local pulseConn = nil
 
                 KeybindButton.MouseButton1Click:Connect(function()
                     Keybind.Listening = true
@@ -939,7 +939,7 @@ function InvokerLib:CreateWindow(config)
                     end
                 end)
 
-                function Keybind:Set(key: Enum.KeyCode)
+                function Keybind:Set(key)
                     Keybind.Value = key
                     KeybindButton.Text = key.Name
                 end
@@ -989,7 +989,7 @@ function InvokerLib:CreateWindow(config)
                     callback(TextboxInput.Text, enterPressed)
                 end)
 
-                function Textbox:Set(value: string)
+                function Textbox:Set(value)
                     Textbox.Value = value
                     TextboxInput.Text = value
                 end
@@ -1001,7 +1001,7 @@ function InvokerLib:CreateWindow(config)
                 return Textbox
             end
 
-            function Section:CreateLabel(text: string)
+            function Section:CreateLabel(text)
                 local LabelFrame = Create("TextLabel", {
                     BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 25),
                     Font = Enum.Font.Gotham, Text = text or "Label",
@@ -1009,7 +1009,7 @@ function InvokerLib:CreateWindow(config)
                     TextXAlignment = Enum.TextXAlignment.Left, Parent = SectionContent
                 })
                 local Label = {}
-                function Label:Set(newText: string) LabelFrame.Text = newText end
+                function Label:Set(newText) LabelFrame.Text = newText end
                 return Label
             end
 
@@ -1046,7 +1046,7 @@ function InvokerLib:CreateWindow(config)
             function Section:CreateColorPicker(config)
                 config = config or {}
                 local pickerName = config.Name or "ColorPicker"
-                local default: Color3 = config.Default or Color3.fromRGB(139, 92, 246)
+                local default = config.Default or Color3.fromRGB(139, 92, 246)
                 local callback = config.Callback or function() end
                 local ColorPicker = {}
                 ColorPicker.Value = default
@@ -1124,7 +1124,7 @@ function InvokerLib:CreateWindow(config)
                     end)
                 end
 
-                function ColorPicker:Set(color: Color3)
+                function ColorPicker:Set(color)
                     values = { color.R * 255, color.G * 255, color.B * 255 }
                     for i = 1, 3 do
                         Tween(fills[i], { Size = UDim2.new(values[i] / 255, 0, 1, 0) }, Ease.Smooth)
@@ -1136,17 +1136,17 @@ function InvokerLib:CreateWindow(config)
                 return ColorPicker
             end
 
-            function Section:CreateDivider(label: string?)
+            function Section:CreateDivider(label)
                 local DividerFrame = Create("Frame", {
                     BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20), Parent = SectionContent
                 })
                 if label then
-                    local leftLine = Create("Frame", {
+                    Create("Frame", {
                         BackgroundColor3 = Theme.Divider, Position = UDim2.new(0, 0, 0.5, 0),
                         AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(0.35, -5, 0, 1),
                         BorderSizePixel = 0, Parent = DividerFrame
                     })
-                    local rightLine = Create("Frame", {
+                    Create("Frame", {
                         BackgroundColor3 = Theme.Divider, Position = UDim2.new(0.65, 5, 0.5, 0),
                         AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(0.35, -5, 0, 1),
                         BorderSizePixel = 0, Parent = DividerFrame
@@ -1207,7 +1207,7 @@ function InvokerLib:CreateWindow(config)
                 })
                 AddCorner(Fill, 4)
 
-                function ProgressBar:Set(newVal: number)
+                function ProgressBar:Set(newVal)
                     ProgressBar.Value = math.clamp(newVal, 0, max)
                     ProgressLabel.Text = tostring(ProgressBar.Value) .. " / " .. tostring(max) .. " " .. suffix
                     Tween(Fill, { Size = UDim2.new(math.clamp(ProgressBar.Value / max, 0, 1), 0, 1, 0) }, Ease.Smooth)
@@ -1355,7 +1355,7 @@ function InvokerLib:CreateWindow(config)
         CancelBtn.MouseButton1Click:Connect(function() Close(); onCancel() end)
     end
 
-    function Window:SaveConfig(name: string)
+    function Window:SaveConfig(name)
         local data = {}
         for key, element in pairs(Window._configElements) do
             data[key] = element.Get()
@@ -1364,7 +1364,7 @@ function InvokerLib:CreateWindow(config)
         writefile("invoker_" .. name .. ".cfg", json)
     end
 
-    function Window:LoadConfig(name: string)
+    function Window:LoadConfig(name)
         local file = "invoker_" .. name .. ".cfg"
         if not isfile(file) then return end
         local json = readfile(file)
@@ -1375,7 +1375,7 @@ function InvokerLib:CreateWindow(config)
         end
     end
 
-    local toggleKey: Enum.KeyCode = config.ToggleKey or Enum.KeyCode.RightShift
+    local toggleKey = config.ToggleKey or Enum.KeyCode.RightShift
     UserInputService.InputBegan:Connect(function(input, processed)
         if not processed and input.KeyCode == toggleKey then
             MainFrame.Visible = not MainFrame.Visible
@@ -1385,7 +1385,7 @@ function InvokerLib:CreateWindow(config)
     return Window
 end
 
-function InvokerLib:SetTheme(customTheme: {[string]: Color3})
+function InvokerLib:SetTheme(customTheme)
     for key, value in pairs(customTheme) do
         if Theme[key] then Theme[key] = value end
     end
