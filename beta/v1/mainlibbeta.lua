@@ -9,19 +9,16 @@ local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 
--- ═══════════════════════════════════════════════════════════
---  THEME · ABSOLUTE MONOCHROME
--- ═══════════════════════════════════════════════════════════
 local Theme = {
-    Background   = Color3.fromRGB(18, 18, 18),  -- #121212
+    Background   = Color3.fromRGB(18, 18, 18),
     Sidebar      = Color3.fromRGB(18, 18, 18),
     Panel        = Color3.fromRGB(22, 22, 22),
-    Element      = Color3.fromRGB(30, 30, 30),  -- #1E1E1E
+    Element      = Color3.fromRGB(30, 30, 30),
     ElementHover = Color3.fromRGB(38, 38, 38),
     Surface      = Color3.fromRGB(26, 26, 26),
-    Accent       = Color3.fromRGB(255, 255, 255), -- #FFFFFF
-    AccentDim    = Color3.fromRGB(161, 161, 170), -- #A1A1AA
-    Invert       = Color3.fromRGB(18, 18, 18),    -- text on white
+    Accent       = Color3.fromRGB(255, 255, 255),
+    AccentDim    = Color3.fromRGB(161, 161, 170),
+    Invert       = Color3.fromRGB(18, 18, 18),
     Text         = Color3.fromRGB(245, 245, 245),
     TextDark     = Color3.fromRGB(130, 130, 138),
     TextMuted    = Color3.fromRGB(82, 82, 88),
@@ -45,9 +42,6 @@ local Ease = {
 
 local _ThemeRefs = {}
 
--- ═══════════════════════════════════════════════════════════
---  CORE UTILITIES
--- ═══════════════════════════════════════════════════════════
 local function Create(instanceType, properties)
     local instance = Instance.new(instanceType)
     for prop, value in pairs(properties) do
@@ -82,18 +76,52 @@ local function TrackTheme(instance, property, themeKey)
     table.insert(_ThemeRefs, { instance, property, themeKey })
 end
 
--- top inset highlight — the single "light from above" cue (no blur, no blob)
 local function InsetHighlight(parent, transp)
     local hi = Create("Frame", {
         Name = "InsetHi", BackgroundColor3 = Theme.Accent, BackgroundTransparency = transp or 0.88,
-        Position = UDim2.new(0, 1, 0, 1), Size = UDim2.new(1, -2, 0, 1), BorderSizePixel = 0, ZIndex = 4, Parent = parent
+        Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(1, 0, 0, 1), BorderSizePixel = 0, ZIndex = 4, Parent = parent
     })
     local g = Instance.new("UIGradient")
     g.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1)
+        NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 0.6)
     })
     g.Parent = hi
     return hi
+end
+
+-- vector-drawn glyph (no unicode arrows → no tofu squares)
+local function Line(parent, cx, cy, len, thick, rot, color)
+    return Create("Frame", {
+        BackgroundColor3 = color or Theme.Accent, BorderSizePixel = 0,
+        AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, cx, 0, cy),
+        Size = UDim2.new(0, len, 0, thick), Rotation = rot or 0, Parent = parent
+    })
+end
+
+local GLYPH = {
+    chevron = { {3.5, 4, 6, 1.6, 45},  {8.5, 4, 6, 1.6, -45} },
+    check   = { {3.6, 6.4, 3.6, 1.7, 45}, {7.6, 5.2, 7.4, 1.7, -45} },
+    cross   = { {6, 6, 8.4, 1.7, 45}, {6, 6, 8.4, 1.7, -45} },
+    minus   = { {6, 6, 7, 1.7, 0} },
+}
+
+local function MakeIcon(kind, parent, color, size)
+    size = size or 12
+    local k = size / 12
+    local box = Create("Frame", {
+        Name = "Icon_" .. kind, BackgroundTransparency = 1, BorderSizePixel = 0,
+        AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.new(0, size, 0, size), Parent = parent
+    })
+    for _, d in ipairs(GLYPH[kind]) do
+        Line(box, d[1] * k, d[2] * k, d[3] * k, d[4] * k, d[5], color)
+    end
+    return box
+end
+
+local function RecolorIcon(box, color)
+    for _, c in ipairs(box:GetChildren()) do
+        if c:IsA("Frame") then Tween(c, { BackgroundColor3 = color }, Ease.Snap) end
+    end
 end
 
 local function MakeDraggable(frame, handle)
@@ -139,17 +167,50 @@ local function CreateRipple(parent, color)
     end)
 end
 
--- hairline stroke that brightens on hover — the monochrome "alive" cue
-local function AddElementStroke(elementFrame, radius)
+local function AddElementStroke(elementFrame)
     local stroke = AddStroke(elementFrame, Theme.Hairline, 1)
-    elementFrame.MouseEnter:Connect(function() Tween(stroke, { Color = Theme.HairlineHi }, Ease.Snap) end)
-    elementFrame.MouseLeave:Connect(function() Tween(stroke, { Color = Theme.Hairline }, Ease.Smooth) end)
+    local bar = Create("Frame", {
+        Name = "HoverBar", BackgroundColor3 = Theme.Accent, BorderSizePixel = 0,
+        AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, 0),
+        Size = UDim2.new(0, 2, 0, 0), ZIndex = 5, Parent = elementFrame
+    })
+    AddCorner(bar, 1)
+    elementFrame.MouseEnter:Connect(function()
+        Tween(stroke, { Color = Theme.HairlineHi }, Ease.Snap)
+        Tween(bar, { Size = UDim2.new(0, 2, 0.55, 0) }, Ease.Soft)
+    end)
+    elementFrame.MouseLeave:Connect(function()
+        Tween(stroke, { Color = Theme.Hairline }, Ease.Smooth)
+        Tween(bar, { Size = UDim2.new(0, 2, 0, 0) }, Ease.Smooth)
+    end)
     return stroke
 end
 
--- ═══════════════════════════════════════════════════════════
---  TOOLTIP
--- ═══════════════════════════════════════════════════════════
+local function PulseLoop(blob, a, b, dur)
+    local tw = Tween(blob, { BackgroundTransparency = b }, TweenInfo.new(dur, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut))
+    tw.Completed:Connect(function() if blob.Parent then PulseLoop(blob, b, a, dur) end end)
+end
+
+local function StatusDot(parent, pos)
+    local wrap = Create("Frame", { BackgroundTransparency = 1, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = pos, Size = UDim2.new(0, 14, 0, 14), Parent = parent })
+    local ping = Create("Frame", { BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.4, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 6, 0, 6), Parent = wrap })
+    AddCorner(ping, 7)
+    local core = Create("Frame", { BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 6, 0, 6), ZIndex = 2, Parent = wrap })
+    AddCorner(core, 3)
+    local function beat()
+        ping.Size = UDim2.new(0, 6, 0, 6); ping.BackgroundTransparency = 0.3
+        Tween(ping, { Size = UDim2.new(0, 14, 0, 14), BackgroundTransparency = 1 }, TweenInfo.new(1.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out))
+    end
+    beat()
+    local conn
+    conn = RunService.Heartbeat:Connect(function() end) -- placeholder, replaced by task loop
+    conn:Disconnect()
+    task.spawn(function()
+        while wrap.Parent do task.wait(1.6); if wrap.Parent then beat() end end
+    end)
+    return wrap
+end
+
 local TooltipGui, TooltipFrame, TooltipLabel = nil, nil, nil
 local function InitTooltip()
     if TooltipGui then return end
@@ -176,9 +237,6 @@ local function BindTooltip(element, description)
     element.MouseLeave:Connect(function() HideTooltip() end)
 end
 
--- ═══════════════════════════════════════════════════════════
---  WINDOW
--- ═══════════════════════════════════════════════════════════
 function InvokerLib:CreateWindow(config)
     config = config or {}
     local windowTitle = config.Title or "InvokerLib"
@@ -193,12 +251,13 @@ function InvokerLib:CreateWindow(config)
 
     local ScreenGui = Create("ScreenGui", { Name = "InvokerLib", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = game.CoreGui })
 
+    -- sharp, unrounded shell
     local MainFrame = Create("Frame", {
         Name = "MainFrame", AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = Theme.Background,
         Position = UDim2.new(0.5, 0, 0.5, 0), Size = windowSize, ClipsDescendants = true, Parent = ScreenGui
     })
-    AddCorner(MainFrame, 12); AddStroke(MainFrame, Theme.Hairline, 1); TrackTheme(MainFrame, "BackgroundColor3", "Background")
-    InsetHighlight(MainFrame, 0.86)
+    AddStroke(MainFrame, Theme.Hairline, 1); TrackTheme(MainFrame, "BackgroundColor3", "Background")
+    InsetHighlight(MainFrame, 0.84)
 
     Create("ImageLabel", {
         Name = "Shadow", AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1,
@@ -207,40 +266,38 @@ function InvokerLib:CreateWindow(config)
         ImageTransparency = 0.55, ScaleType = Enum.ScaleType.Slice, SliceCenter = Rect.new(20, 20, 280, 280), ZIndex = -1, Parent = MainFrame
     })
 
-    -- ── Sidebar ──────────────────────────────────────────
     local Sidebar = Create("Frame", { Name = "Sidebar", BackgroundColor3 = Theme.Sidebar, Size = UDim2.new(0, 192, 1, 0), ZIndex = 1, Parent = MainFrame })
     TrackTheme(Sidebar, "BackgroundColor3", "Sidebar")
     Create("Frame", { Name = "SidebarFix", BackgroundColor3 = Theme.Sidebar, Position = UDim2.new(1, -12, 0, 0), Size = UDim2.new(0, 12, 1, 0), BorderSizePixel = 0, Parent = Sidebar })
-    local seam = Create("Frame", { BackgroundColor3 = Theme.Hairline, Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 1, 1, 0), BorderSizePixel = 0, ZIndex = 2, Parent = Sidebar })
+    Create("Frame", { BackgroundColor3 = Theme.Hairline, Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 1, 1, 0), BorderSizePixel = 0, ZIndex = 2, Parent = Sidebar })
 
-    local LogoSection = Create("Frame", { Name = "LogoSection", BackgroundTransparency = 1, Active = true, Size = UDim2.new(1, 0, 0, 70), Parent = Sidebar })
-    local LogoText = Create("TextLabel", {
+    local LogoSection = Create("Frame", { Name = "LogoSection", BackgroundTransparency = 1, Active = true, Size = UDim2.new(1, 0, 0, 72), Parent = Sidebar })
+    Create("TextLabel", {
         Name = "LogoText", BackgroundTransparency = 1, Position = UDim2.new(0, 20, 0, 18),
-        Size = UDim2.new(1, -32, 0, 24), Font = Enum.Font.GothamBlack, Text = windowTitle,
-        TextColor3 = Theme.Accent, TextSize = 19, TextXAlignment = Enum.TextXAlignment.Left, Parent = LogoSection
+        Size = UDim2.new(1, -44, 0, 26), Font = Enum.Font.GothamBlack, Text = windowTitle,
+        TextColor3 = Theme.Accent, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Left, Parent = LogoSection
     })
     Create("TextLabel", {
-        Name = "LogoSub", BackgroundTransparency = 1, Position = UDim2.new(0, 21, 0, 44),
+        Name = "LogoSub", BackgroundTransparency = 1, Position = UDim2.new(0, 21, 0, 46),
         Size = UDim2.new(1, -32, 0, 14), Font = Enum.Font.Code, Text = windowSub,
         TextColor3 = Theme.TextMuted, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, Parent = LogoSection
     })
+    StatusDot(LogoSection, UDim2.new(1, -16, 0, 24))
     Create("Frame", { BackgroundColor3 = Theme.Hairline, Position = UDim2.new(0, 20, 1, -1), Size = UDim2.new(1, -40, 0, 1), BorderSizePixel = 0, Parent = LogoSection })
 
     local TabContainer = Create("ScrollingFrame", {
-        Name = "TabContainer", BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 80),
-        Size = UDim2.new(1, 0, 1, -142), ScrollBarThickness = 0,
+        Name = "TabContainer", BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 82),
+        Size = UDim2.new(1, 0, 1, -146), ScrollBarThickness = 0,
         CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = Sidebar
     })
     AddPadding(TabContainer, 12)
     Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 2), Parent = TabContainer })
-
     Create("TextLabel", {
         Name = "CategoryLabel", BackgroundTransparency = 1, Size = UDim2.new(1, -24, 0, 22),
         Font = Enum.Font.Code, Text = "// NAVIGATION", TextColor3 = Theme.TextMuted, TextSize = 9,
         TextXAlignment = Enum.TextXAlignment.Left, Parent = TabContainer
     })
 
-    -- ── Player card ──────────────────────────────────────
     local PlayerSection = Create("Frame", { Position = UDim2.new(0, 12, 1, -58), Size = UDim2.new(1, -24, 0, 46), BackgroundColor3 = Theme.Element, ZIndex = 1, Parent = Sidebar })
     AddCorner(PlayerSection, 8); AddElementStroke(PlayerSection); TrackTheme(PlayerSection, "BackgroundColor3", "Element")
     local AvatarImage = Create("ImageLabel", {
@@ -250,6 +307,7 @@ function InvokerLib:CreateWindow(config)
     })
     AddCorner(AvatarImage, 15)
     local avatarStroke = AddStroke(AvatarImage, Theme.HairlineHi, 1)
+    StatusDot(PlayerSection, UDim2.new(0, 32, 0.5, 11))
     Create("TextLabel", {
         Position = UDim2.new(0, 46, 0.5, -1), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, -54, 0, 30),
         BackgroundTransparency = 1, Font = Enum.Font.Gotham, Text = "Signed in as\n" .. Player.Name,
@@ -258,49 +316,69 @@ function InvokerLib:CreateWindow(config)
     PlayerSection.MouseEnter:Connect(function() Tween(avatarStroke, { Color = Theme.Accent }, Ease.Smooth) end)
     PlayerSection.MouseLeave:Connect(function() Tween(avatarStroke, { Color = Theme.HairlineHi }, Ease.Smooth) end)
 
-    -- ── Content ──────────────────────────────────────────
-    local ContentArea = Create("Frame", { Name = "ContentArea", BackgroundColor3 = Theme.Panel, Position = UDim2.new(0, 193, 0, 0), Size = UDim2.new(1, -193, 1, 0), ZIndex = 1, Parent = MainFrame })
+    local ContentArea = Create("Frame", { Name = "ContentArea", BackgroundColor3 = Theme.Panel, Position = UDim2.new(0, 193, 0, 0), Size = UDim2.new(1, -193, 1, 0), ClipsDescendants = true, ZIndex = 1, Parent = MainFrame })
     TrackTheme(ContentArea, "BackgroundColor3", "Panel")
 
-    local Header = Create("Frame", { Name = "Header", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 54), Parent = ContentArea })
+    -- ambient drifting haze (monochrome, no color)
+    local hazeA = Create("Frame", { BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.97, BorderSizePixel = 0, Position = UDim2.new(0.1, 0, 0.05, 0), Size = UDim2.new(0, 260, 0, 260), ZIndex = 0, Active = false, Parent = ContentArea })
+    AddCorner(hazeA, 130)
+    local hazeB = Create("Frame", { BackgroundColor3 = Theme.AccentDim, BackgroundTransparency = 0.97, BorderSizePixel = 0, Position = UDim2.new(1, -180, 1, -160), Size = UDim2.new(0, 300, 0, 300), ZIndex = 0, Active = false, Parent = ContentArea })
+    AddCorner(hazeB, 150)
+    PulseLoop(hazeA, 0.97, 0.93, 5.5)
+    PulseLoop(hazeB, 0.97, 0.94, 7.0)
+
+    -- vignette for depth
+    local function Vignette(pos, size, rot)
+        local v = Create("Frame", { BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.5, BorderSizePixel = 0, Position = pos, Size = size, ZIndex = 0, Active = false, Parent = ContentArea })
+        local g = Instance.new("UIGradient"); g.Rotation = rot or 0
+        g.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) })
+        g.Parent = v
+    end
+    Vignette(UDim2.new(0, 0, 0, 0), UDim2.new(1, 0, 0, 26), 90)
+    Vignette(UDim2.new(0, 0, 1, -26), UDim2.new(1, 0, 0, 26), 270)
+    Vignette(UDim2.new(0, 0, 0, 0), UDim2.new(0, 30, 1, 0), 0)
+    Vignette(UDim2.new(1, -30, 0, 0), UDim2.new(0, 30, 1, 0), 180)
+
+    local Header = Create("Frame", { Name = "Header", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 54), ZIndex = 1, Parent = ContentArea })
     local Breadcrumb = Create("TextLabel", {
         Name = "Breadcrumb", BackgroundTransparency = 1, Position = UDim2.new(0, 22, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5),
         Size = UDim2.new(0.6, 0, 0, 20), Font = Enum.Font.Gotham, Text = "Home  /  Overview",
         TextColor3 = Theme.TextDark, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, RichText = true, Parent = Header
     })
+    Create("Frame", { BackgroundColor3 = Theme.Hairline, Position = UDim2.new(0, 22, 1, -1), Size = UDim2.new(1, -44, 0, 1), BorderSizePixel = 0, Parent = Header })
 
-    local headerLine = Create("Frame", { BackgroundColor3 = Theme.Hairline, Position = UDim2.new(0, 22, 1, -1), Size = UDim2.new(1, -44, 0, 1), BorderSizePixel = 0, Parent = Header })
+    local PagesContainer = Create("Frame", { Name = "PagesContainer", BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 54), Size = UDim2.new(1, 0, 1, -54), ZIndex = 1, Parent = ContentArea })
 
-    local PagesContainer = Create("Frame", { Name = "PagesContainer", BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 54), Size = UDim2.new(1, 0, 1, -54), Parent = ContentArea })
-
-    -- window controls
-    local function MakeControl(symbol, offX)
+    local function MakeControl(offX)
         local btn = Create("TextButton", {
             BackgroundColor3 = Theme.Surface, Position = UDim2.new(1, offX, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5),
-            Size = UDim2.new(0, 28, 0, 28), Font = Enum.Font.GothamMedium, Text = symbol,
-            TextColor3 = Theme.TextDark, TextSize = 15, Parent = Header
+            Size = UDim2.new(0, 28, 0, 28), Text = "", Parent = Header
         })
         AddCorner(btn, 7); AddStroke(btn, Theme.Hairline, 1); CreateRipple(btn, Theme.Accent)
         return btn
     end
-    local CloseButton = MakeControl("×", -40)
-    local MinButton = MakeControl("–", -74)
+    local CloseButton = MakeControl(-40)
+    local closeIcon = MakeIcon("cross", CloseButton, Theme.TextDark, 11)
+    closeIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+    local MinButton = MakeControl(-74)
+    local minIcon = MakeIcon("minus", MinButton, Theme.TextDark, 11)
+    minIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
 
-    CloseButton.MouseEnter:Connect(function() Tween(CloseButton, { BackgroundColor3 = Theme.Accent, TextColor3 = Theme.Invert }, Ease.Snap) end)
-    CloseButton.MouseLeave:Connect(function() Tween(CloseButton, { BackgroundColor3 = Theme.Surface, TextColor3 = Theme.TextDark }, Ease.Smooth) end)
+    CloseButton.MouseEnter:Connect(function() Tween(CloseButton, { BackgroundColor3 = Theme.Accent }, Ease.Snap); RecolorIcon(closeIcon, Theme.Invert) end)
+    CloseButton.MouseLeave:Connect(function() Tween(CloseButton, { BackgroundColor3 = Theme.Surface }, Ease.Smooth); RecolorIcon(closeIcon, Theme.TextDark) end)
     CloseButton.MouseButton1Click:Connect(function()
         Tween(MainFrame, { Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1 }, Ease.Shrink)
         task.wait(0.2); ScreenGui:Destroy()
     end)
-    MinButton.MouseEnter:Connect(function() Tween(MinButton, { BackgroundColor3 = Theme.ElementHover, TextColor3 = Theme.Text }, Ease.Snap) end)
-    MinButton.MouseLeave:Connect(function() Tween(MinButton, { BackgroundColor3 = Theme.Surface, TextColor3 = Theme.TextDark }, Ease.Smooth) end)
+    MinButton.MouseEnter:Connect(function() Tween(MinButton, { BackgroundColor3 = Theme.ElementHover }, Ease.Snap); RecolorIcon(minIcon, Theme.Text) end)
+    MinButton.MouseLeave:Connect(function() Tween(MinButton, { BackgroundColor3 = Theme.Surface }, Ease.Smooth); RecolorIcon(minIcon, Theme.TextDark) end)
 
     local minimized = false
     MinButton.MouseButton1Click:Connect(function()
         minimized = not minimized
         if minimized then
             PlayerSection.Visible = false
-            Tween(MainFrame, { Size = UDim2.new(0, 192, 0, 70) }, Ease.Smooth)
+            Tween(MainFrame, { Size = UDim2.new(0, 192, 0, 72) }, Ease.Smooth)
         else
             Tween(MainFrame, { Size = windowSize }, Ease.Spring)
             task.delay(0.16, function() if not minimized then PlayerSection.Visible = true end end)
@@ -313,9 +391,14 @@ function InvokerLib:CreateWindow(config)
     Tween(MainFrame, { Size = windowSize }, Ease.Spring)
     Tween(MainFrame, { BackgroundTransparency = 0 }, Ease.Smooth)
 
-    -- ═════════════════════════════════════════════════════
-    --  TAB
-    -- ═════════════════════════════════════════════════════
+    -- boot scan line
+    task.delay(0.18, function()
+        if not MainFrame.Parent then return end
+        local scan = Create("Frame", { BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.55, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 1), ZIndex = 30, Parent = MainFrame })
+        Tween(scan, { Position = UDim2.new(0, 0, 1, 0), BackgroundTransparency = 1 }, TweenInfo.new(0.7, Enum.EasingStyle.Quart, Enum.EasingDirection.Out))
+        task.delay(0.72, function() if scan.Parent then scan:Destroy() end end)
+    end)
+
     function Window:CreateTab(config)
         config = config or {}
         local tabName = config.Name or "Tab"
@@ -328,19 +411,16 @@ function InvokerLib:CreateWindow(config)
             Size = UDim2.new(1, -24, 0, 34), Font = Enum.Font.Gotham, Text = "", Parent = TabContainer
         })
         AddCorner(TabButton, 7)
-
         local TabLabel = Create("TextLabel", {
             Name = "Label", BackgroundTransparency = 1, Position = UDim2.new(0, 16, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5),
             Size = UDim2.new(1, -28, 0, 20), Font = Enum.Font.GothamMedium, Text = tabName,
             TextColor3 = Theme.TextDark, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = TabButton
         })
-
         local TabIndicator = Create("Frame", {
             Name = "Indicator", BackgroundColor3 = Theme.Accent, Position = UDim2.new(0, 0, 0.5, 0),
             AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(0, 2, 0, 0), Parent = TabButton
         })
         AddCorner(TabIndicator, 1)
-
         local Badge = Create("Frame", { Name = "Badge", BackgroundColor3 = Theme.Accent, Position = UDim2.new(1, -10, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(0, 6, 0, 6), Visible = false, Parent = TabButton })
         AddCorner(Badge, 3)
 
@@ -402,9 +482,6 @@ function InvokerLib:CreateWindow(config)
         table.insert(Window.Tabs, Tab)
         if #Window.Tabs == 1 then SelectTab() end
 
-        -- ═════════════════════════════════════════════════
-        --  SECTION
-        -- ═════════════════════════════════════════════════
         function Tab:CreateSection(name)
             sectionCount = sectionCount + 1
             local localOrder = sectionCount
@@ -414,24 +491,36 @@ function InvokerLib:CreateWindow(config)
                 Name = name or "Section", BackgroundColor3 = Theme.Element, Size = UDim2.new(1, 0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = localOrder, Parent = TabPage
             })
-            AddCorner(SectionFrame, 10); AddStroke(SectionFrame, Theme.Hairline, 1); TrackTheme(SectionFrame, "BackgroundColor3", "Element")
-            SectionFrame.BackgroundTransparency = 1
-            Tween(SectionFrame, { BackgroundTransparency = 0 }, Ease.Soft)
+            AddCorner(SectionFrame, 10)
+            local secStroke = AddStroke(SectionFrame, Theme.Hairline, 1); TrackTheme(SectionFrame, "BackgroundColor3", "Element")
 
-            local SectionHeader = Create("Frame", { Name = "Header", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 40), Parent = SectionFrame })
+            -- staggered reveal
+            SectionFrame.BackgroundTransparency = 1; secStroke.Transparency = 1
+            task.delay(localOrder * 0.05, function()
+                if not SectionFrame.Parent then return end
+                Tween(SectionFrame, { BackgroundTransparency = 0 }, Ease.Soft)
+                Tween(secStroke, { Transparency = 0 }, Ease.Soft)
+            end)
+
+            local SectionHeader = Create("Frame", { Name = "Header", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 42), Parent = SectionFrame })
             Create("Frame", { BackgroundColor3 = Theme.Accent, Position = UDim2.new(0, 18, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(0, 4, 0, 4), Parent = SectionHeader })
             Create("TextLabel", {
                 Name = "Title", BackgroundTransparency = 1, Position = UDim2.new(0, 30, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5),
-                Size = UDim2.new(1, -42, 0, 20), Font = Enum.Font.GothamBold, Text = (name or "Section"):upper(),
+                Size = UDim2.new(0.6, 0, 0, 20), Font = Enum.Font.GothamBold, Text = (name or "Section"):upper(),
                 TextColor3 = Theme.Text, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = SectionHeader
             })
+            Create("Frame", { BackgroundColor3 = Theme.Hairline, Position = UDim2.new(1, -52, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(0, 22, 0, 1), BorderSizePixel = 0, Parent = SectionHeader })
+            Create("TextLabel", {
+                BackgroundTransparency = 1, Position = UDim2.new(1, -22, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5),
+                Size = UDim2.new(0, 22, 0, 20), Font = Enum.Font.Code, Text = string.format("%02d", localOrder),
+                TextColor3 = Theme.TextMuted, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Right, Parent = SectionHeader
+            })
 
-            local SectionContent = Create("Frame", { Name = "Content", BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 40), Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Parent = SectionFrame })
+            local SectionContent = Create("Frame", { Name = "Content", BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 42), Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Parent = SectionFrame })
             AddPadding(SectionContent, 12)
             Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8), Parent = SectionContent })
             Section.Frame = SectionFrame; Section.Content = SectionContent
 
-            -- ── Toggle (inverted track) ──────────────────
             function Section:CreateToggle(config)
                 config = config or {}
                 local toggleName = config.Name or "Toggle"
@@ -468,7 +557,6 @@ function InvokerLib:CreateWindow(config)
                 return Toggle
             end
 
-            -- ── Button (quiet by default, inverted if Primary) ──
             function Section:CreateButton(config)
                 config = config or {}
                 local buttonName = config.Name or "Button"
@@ -508,7 +596,6 @@ function InvokerLib:CreateWindow(config)
                 return {}
             end
 
-            -- ── Slider (mono value, double dot) ──────────
             function Section:CreateSlider(config)
                 config = config or {}
                 local sliderName = config.Name or "Slider"
@@ -549,7 +636,6 @@ function InvokerLib:CreateWindow(config)
                 return Slider
             end
 
-            -- ── Dropdown ─────────────────────────────────
             function Section:CreateDropdown(config)
                 config = config or {}
                 local dropdownName = config.Name or "Dropdown"
@@ -562,8 +648,9 @@ function InvokerLib:CreateWindow(config)
                 local DropdownFrame = Create("Frame", { Name = dropdownName, BackgroundColor3 = Theme.Surface, Size = UDim2.new(1, 0, 0, 40), ClipsDescendants = true, Parent = SectionContent })
                 AddCorner(DropdownFrame, 8); AddElementStroke(DropdownFrame); BindTooltip(DropdownFrame, config.Description)
                 Create("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(0.5, -14, 0, 40), Font = Enum.Font.Gotham, Text = dropdownName, TextColor3 = Theme.Text, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = DropdownFrame })
-                local DropdownSelected = Create("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.new(0.5, -34, 0, 40), Font = Enum.Font.Code, Text = multiSelect and "0 selected" or tostring(default), TextColor3 = Theme.AccentDim, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Right, Parent = DropdownFrame })
-                local DropdownArrow = Create("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(1, -28, 0, 0), Size = UDim2.new(0, 20, 0, 40), Font = Enum.Font.GothamBold, Text = "⌄", TextColor3 = Theme.TextDark, TextSize = 16, Parent = DropdownFrame })
+                local DropdownSelected = Create("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.new(0.5, -38, 0, 40), Font = Enum.Font.Code, Text = multiSelect and "0 selected" or tostring(default), TextColor3 = Theme.AccentDim, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Right, Parent = DropdownFrame })
+                local DropdownArrow = MakeIcon("chevron", DropdownFrame, Theme.TextDark, 12)
+                DropdownArrow.Position = UDim2.new(1, -20, 0, 20)
 
                 local OptionsScroll = Create("ScrollingFrame", { Name = "Options", BackgroundTransparency = 1, Position = UDim2.new(0, 6, 0, 46), Size = UDim2.new(1, -12, 0, math.min(#options * 32, 156)), ScrollBarThickness = 2, ScrollBarImageColor3 = Theme.HairlineHi, CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = DropdownFrame })
                 Create("UIListLayout", { Padding = UDim.new(0, 3), Parent = OptionsScroll })
@@ -572,7 +659,7 @@ function InvokerLib:CreateWindow(config)
                 for _, option in ipairs(options) do
                     local OptionButton = Create("TextButton", { Name = option, BackgroundColor3 = Theme.Background, Size = UDim2.new(1, 0, 0, 30), Font = Enum.Font.Gotham, Text = "", TextColor3 = Theme.Text, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = OptionsScroll })
                     AddCorner(OptionButton, 5)
-                    local mark = nil
+                    local mark
                     if multiSelect then
                         mark = Create("Frame", { BackgroundColor3 = Theme.Background, Position = UDim2.new(0, 9, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(0, 13, 0, 13), Parent = OptionButton })
                         AddCorner(mark, 3); AddStroke(mark, Theme.HairlineHi, 1)
@@ -616,7 +703,6 @@ function InvokerLib:CreateWindow(config)
                 return Dropdown
             end
 
-            -- ── Keybind (mono glyph, blinking border) ────
             function Section:CreateKeybind(config)
                 config = config or {}
                 local keybindName = config.Name or "Keybind"; local default = config.Default or Enum.KeyCode.E
@@ -629,7 +715,7 @@ function InvokerLib:CreateWindow(config)
                 AddCorner(KeybindButton, 6); local kbStroke = AddStroke(KeybindButton, Theme.Hairline, 1)
                 local pulseConn = nil
                 KeybindButton.MouseButton1Click:Connect(function()
-                    Keybind.Listening = true; KeybindButton.Text = "···"
+                    Keybind.Listening = true; KeybindButton.Text = "..."
                     Tween(kbStroke, { Color = Theme.Accent }, Ease.Snap)
                     pulseConn = RunService.Heartbeat:Connect(function() kbStroke.Transparency = 0.3 + math.abs(math.sin(tick() * 4)) * 0.7 end)
                 end)
@@ -644,10 +730,9 @@ function InvokerLib:CreateWindow(config)
                 return Keybind
             end
 
-            -- ── Textbox ──────────────────────────────────
             function Section:CreateTextbox(config)
                 config = config or {}
-                local textboxName = config.Name or "Textbox"; local placeholder = config.Placeholder or "Type something…"
+                local textboxName = config.Name or "Textbox"; local placeholder = config.Placeholder or "Type something..."
                 local callback = config.Callback or function() end
                 local Textbox = {}; Textbox.Value = ""
                 local TextboxFrame = Create("Frame", { Name = textboxName, BackgroundColor3 = Theme.Surface, Size = UDim2.new(1, 0, 0, 40), Parent = SectionContent })
@@ -662,7 +747,6 @@ function InvokerLib:CreateWindow(config)
                 return Textbox
             end
 
-            -- ── Label / Paragraph ────────────────────────
             function Section:CreateLabel(text)
                 local LabelFrame = Create("TextLabel", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 22), Font = Enum.Font.Gotham, Text = text or "Label", TextColor3 = Theme.TextDark, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = SectionContent })
                 local Label = {}; function Label:Set(t) LabelFrame.Text = t end; return Label
@@ -678,7 +762,6 @@ function InvokerLib:CreateWindow(config)
                 local Paragraph = {}; function Paragraph:Set(c) ParagraphTitle.Text = c.Title or ParagraphTitle.Text; ParagraphContent.Text = c.Content or ParagraphContent.Text end; return Paragraph
             end
 
-            -- ── ColorPicker (the only chromatic surface) ─
             function Section:CreateColorPicker(config)
                 config = config or {}
                 local pickerName = config.Name or "ColorPicker"; local default = config.Default or Color3.fromRGB(161, 161, 170)
@@ -716,7 +799,6 @@ function InvokerLib:CreateWindow(config)
                 return ColorPicker
             end
 
-            -- ── Divider ──────────────────────────────────
             function Section:CreateDivider(label)
                 local DividerFrame = Create("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), Parent = SectionContent })
                 if label then
@@ -728,7 +810,6 @@ function InvokerLib:CreateWindow(config)
                 end
             end
 
-            -- ── ProgressBar ──────────────────────────────
             function Section:CreateProgressBar(config)
                 config = config or {}
                 local barName = config.Name or "Progress"; local max = config.Max or 100; local value = config.Value or 0; local suffix = config.Suffix or ""
@@ -747,17 +828,12 @@ function InvokerLib:CreateWindow(config)
         return Tab
     end
 
-    -- ═════════════════════════════════════════════════════
-    --  NOTIFY · redesigned minimal toast
-    -- ═════════════════════════════════════════════════════
     function Window:Notify(config)
         config = config or {}
         local title = config.Title or "Notification"
         local content = config.Content or ""
         local duration = config.Duration or 3.5
         local notifType = config.Type or "Info"
-
-        local glyphs = { Info = "i", Success = "✓", Warning = "!", Error = "×" }
         local inverted = (notifType == "Error")
 
         local NotifContainer = ScreenGui:FindFirstChild("NotifContainer")
@@ -769,20 +845,23 @@ function InvokerLib:CreateWindow(config)
         local NotifFrame = Create("Frame", { Name = "Notification", BackgroundColor3 = Theme.Element, Size = UDim2.new(1, 0, 0, 66), ClipsDescendants = true, Parent = NotifContainer })
         AddCorner(NotifFrame, 10); AddStroke(NotifFrame, Theme.HairlineHi, 1)
 
-        -- top timer line (shrinks left→right)
         local Timer = Create("Frame", { BackgroundColor3 = inverted and Theme.Invert or Theme.Accent, BackgroundTransparency = inverted and 0.4 or 0.55, Size = UDim2.new(1, 0, 0, 2), BorderSizePixel = 0, ZIndex = 3, Parent = NotifFrame })
 
-        -- glyph marker
         local Marker = Create("Frame", { BackgroundColor3 = inverted and Theme.Accent or Theme.Background, Position = UDim2.new(0, 14, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(0, 24, 0, 24), ZIndex = 2, Parent = NotifFrame })
         AddCorner(Marker, 7)
         if not inverted then AddStroke(Marker, Theme.HairlineHi, 1) end
-        Create("TextLabel", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Font = Enum.Font.GothamBold, Text = glyphs[notifType], TextColor3 = inverted and Theme.Invert or Theme.Accent, TextSize = 13, Parent = Marker })
+        if notifType == "Success" then
+            local ic = MakeIcon("check", Marker, inverted and Theme.Invert or Theme.Accent, 12); ic.Position = UDim2.new(0.5, 0, 0.5, 0)
+        elseif notifType == "Error" then
+            local ic = MakeIcon("cross", Marker, Theme.Invert, 11); ic.Position = UDim2.new(0.5, 0, 0.5, 0)
+        else
+            Create("TextLabel", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Font = Enum.Font.GothamBold, Text = (notifType == "Warning") and "!" or "i", TextColor3 = inverted and Theme.Invert or Theme.Accent, TextSize = 13, Parent = Marker })
+        end
 
         Create("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 48, 0, 13), Size = UDim2.new(1, -78, 0, 18), Font = Enum.Font.GothamBold, Text = title, TextColor3 = Theme.Text, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = NotifFrame })
         Create("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 48, 0, 32), Size = UDim2.new(1, -78, 0, 26), Font = Enum.Font.Gotham, Text = content, TextColor3 = Theme.TextDark, TextSize = 11, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextTruncate = Enum.TextTruncate.AtEnd, Parent = NotifFrame })
 
-        -- hover close
-        local CloseX = Create("TextButton", { BackgroundTransparency = 1, Position = UDim2.new(1, -26, 0, 8), Size = UDim2.new(0, 18, 0, 18), Font = Enum.Font.GothamMedium, Text = "×", TextColor3 = Theme.TextMuted, TextSize = 13, Visible = false, ZIndex = 3, Parent = NotifFrame })
+        local CloseX = Create("TextButton", { BackgroundTransparency = 1, Position = UDim2.new(1, -26, 0, 8), Size = UDim2.new(0, 18, 0, 18), Font = Enum.Font.GothamMedium, Text = "x", TextColor3 = Theme.TextMuted, TextSize = 12, Visible = false, ZIndex = 3, Parent = NotifFrame })
         NotifFrame.MouseEnter:Connect(function() CloseX.Visible = true end)
         NotifFrame.MouseLeave:Connect(function() CloseX.Visible = false end)
 
@@ -800,9 +879,6 @@ function InvokerLib:CreateWindow(config)
         task.delay(duration, Dismiss)
     end
 
-    -- ═════════════════════════════════════════════════════
-    --  CONFIRM · inverted primary action
-    -- ═════════════════════════════════════════════════════
     function Window:Confirm(config)
         config = config or {}
         local title = config.Title or "Confirm"
@@ -833,9 +909,6 @@ function InvokerLib:CreateWindow(config)
         CancelBtn.MouseButton1Click:Connect(function() Close(); onCancel() end)
     end
 
-    -- ═════════════════════════════════════════════════════
-    --  CONFIG PERSISTENCE
-    -- ═════════════════════════════════════════════════════
     function Window:SaveConfig(name)
         local data = {}; for key, element in pairs(Window._configElements) do data[key] = element.Get() end
         writefile("invoker_" .. name .. ".cfg", HttpService:JSONEncode(data))
@@ -852,9 +925,6 @@ function InvokerLib:CreateWindow(config)
     return Window
 end
 
--- ═══════════════════════════════════════════════════════════
---  LIVE THEME SWAP
--- ═══════════════════════════════════════════════════════════
 function InvokerLib:SetTheme(customTheme)
     for key, value in pairs(customTheme) do if Theme[key] then Theme[key] = value end end
     for _, ref in ipairs(_ThemeRefs) do
